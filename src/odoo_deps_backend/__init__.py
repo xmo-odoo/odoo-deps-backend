@@ -12,13 +12,18 @@ def prepare_metadata_for_build_editable(
     )
     project = pathlib.Path.cwd()
     with pathlib.Path(metadata_directory, name, "METADATA").open('a+') as f:
+        # TODO: setuptools writes "Version: 0.0.0" in METADATA, update it (?) also metadata_directory embeds version 0.0.0...
         with project.joinpath("odoo/requirements.txt").open() as reqs:
             for line in reqs:
                 line, _, _comment = line.partition("#")
                 if not line.strip():
                     continue
                 if line.startswith("psycopg2"):
+                    # we super duper don't want to compile psycopg2 from source
                     f.write("Requires-Dist: psycopg2-binary\n")
+                elif line.startswith("gevent"):
+                    # drop version requirement as distro versions can be fucky
+                    f.write("Requires-Dist: gevent\n")
                 else:
                     f.write(f"Requires-Dist: {line.strip()}\n")
         for optional in (
