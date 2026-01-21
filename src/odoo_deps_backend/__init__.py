@@ -34,18 +34,10 @@ def prepare_metadata_for_build_editable(
         ):
             f.write(f"Requires-Dist: {optional}\n")
 
-        local_plugin = project.parent.joinpath("pytest-odoo").resolve(strict=True)
         for dev in (
             # dev but odoo's so kinda optional?
             "pylint",
             "websocket-client",
-            # actual bespoke dev dependencies
-            "pytest",
-            "pytest-timeout",
-            "pytest-sugar",
-            "pytest-xdist",
-            "pytest-odoo @ git+https://github.com/xmo-odoo/pytest-odoo",
-            "pytest-runbot-autotags @ git+https://github.com/xmo-odoo/pytest-runbot-autotags",
         ):
             f.write(f"Requires-Dist: {dev}\n")
     return name
