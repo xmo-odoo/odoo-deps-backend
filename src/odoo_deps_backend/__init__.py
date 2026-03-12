@@ -30,6 +30,7 @@ def prepare_metadata_for_build_editable(
             "dbfread",
             "geoip2",
             "google-auth",
+            "paramiko",
             "pdfminer.six",
             "phonenumbers",
             "pyjwt",
