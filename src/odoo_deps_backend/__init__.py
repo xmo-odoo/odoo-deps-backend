@@ -1,5 +1,15 @@
 import pathlib
+import re
 from setuptools import build_meta
+
+MINPY_PATTERN = re.compile(
+    r"^MIN_PY_VERSION\s*=\s*\((\d+(?:,\s*\d+)*)\)$",
+    flags=re.MULTILINE | re.ASCII
+)
+MAXPY_PATTERN = re.compile(
+    r"^MAX_PY_VERSION\s*=\s*\((\d+(?:,\s*\d+)*)\)$",
+    flags=re.MULTILINE | re.ASCII
+)
 
 build_editable = build_meta.build_editable
 def prepare_metadata_for_build_editable(
@@ -12,7 +22,23 @@ def prepare_metadata_for_build_editable(
     )
     project = pathlib.Path.cwd()
     with pathlib.Path(metadata_directory, name, "METADATA").open('a+') as f:
-        # TODO: setuptools writes "Version: 0.0.0" in METADATA, update it (?) also metadata_directory embeds version 0.0.0...
+        for candidate in (
+            "release.py",
+            "__init__.py",
+        ):
+            p = project.joinpath("odoo/odoo", candidate)
+            if p.is_file():
+                content = p.read_text()
+                if m := MINPY_PATTERN.search(content):
+                    minpy = ".".join(re.split(r",\s*", m[1]))
+                else:
+                    minpy = "3.12"
+                if m := MAXPY_PATTERN.search(content):
+                    maxpy = ".".join(re.split(r",\s*", m[1]))
+                else:
+                    maxpy = minpy
+                f.write(f"Requires-Python: >={minpy},<={maxpy}.99")
+        
         with project.joinpath("odoo/requirements.txt").open() as reqs:
             for line in reqs:
                 line, _, _comment = line.partition("#")
