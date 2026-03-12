@@ -1,6 +1,6 @@
 import pathlib
 import re
-from setuptools import build_meta
+from setuptools import build_meta, Distribution
 
 MINPY_PATTERN = re.compile(
     r"^MIN_PY_VERSION\s*=\s*\((\d+(?:,\s*\d+)*)\)$",
@@ -16,29 +16,35 @@ def prepare_metadata_for_build_editable(
     metadata_directory: str,
     config_settings: object = None,
 ) -> str:
+    project = pathlib.Path.cwd()
+    for candidate in (
+        "release.py",
+        "__init__.py",
+    ):
+        p = project.joinpath("odoo/odoo", candidate)
+        if p.is_file():
+            content = p.read_text()
+            if m := MINPY_PATTERN.search(content):
+                minpy = ".".join(re.split(r",\s*", m[1]))
+            else:
+                minpy = "3.12"
+            if m := MAXPY_PATTERN.search(content):
+                maxpy = ".".join(re.split(r",\s*", m[1]))
+            else:
+                maxpy = minpy
+            break
+    else:
+        minpy = maxpy = "3.12"
+
+    # setuptools forbids tool.setuptools.dynamic.requires-python, so in order
+    # to have a dynamic requires-python trickery is necessary
+    Distribution.python_requires = f">={minpy},<={maxpy}.99"
     name = build_meta.prepare_metadata_for_build_editable(
         metadata_directory,
         config_settings,
     )
-    project = pathlib.Path.cwd()
+
     with pathlib.Path(metadata_directory, name, "METADATA").open('a+') as f:
-        for candidate in (
-            "release.py",
-            "__init__.py",
-        ):
-            p = project.joinpath("odoo/odoo", candidate)
-            if p.is_file():
-                content = p.read_text()
-                if m := MINPY_PATTERN.search(content):
-                    minpy = ".".join(re.split(r",\s*", m[1]))
-                else:
-                    minpy = "3.12"
-                if m := MAXPY_PATTERN.search(content):
-                    maxpy = ".".join(re.split(r",\s*", m[1]))
-                else:
-                    maxpy = minpy
-                f.write(f"Requires-Python: >={minpy},<={maxpy}.99")
-        
         with project.joinpath("odoo/requirements.txt").open() as reqs:
             for line in reqs:
                 line, _, _comment = line.partition("#")
@@ -61,7 +67,7 @@ def prepare_metadata_for_build_editable(
             "phonenumbers",
             "pyjwt",
             "python-ldap",
-            "rl-renderPM",
+            # "rl-renderPM",
             # "xmlsec",  # hard / impossible to make consistent with lxml?
         ):
             f.write(f"Requires-Dist: {optional}\n")
